@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shopping_list/data/dummy_items.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class GroceryList extends StatelessWidget {
+  const GroceryList({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,10 +13,10 @@ class HomeScreen extends StatelessWidget {
         itemBuilder:
             (context, index) => ListTile(
               title: Text(groceryItems[index].name),
-              leading: SizedBox(
-                height: 20,
-                width: 20,
-                child: Container(color: groceryItems[index].category.color),
+              leading: Container(
+                color: groceryItems[index].category.color,
+                height: 24,
+                width: 24,
               ),
               trailing: Text(groceryItems[index].quantity.toString()),
             ),
