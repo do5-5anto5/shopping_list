@@ -14,6 +14,7 @@ class _GroceryListState extends State<GroceryList> {
   final List<GroceryItem> _groceryItems = [];
 
   void _addItem() async {
+
     final newItem = await Navigator.of(
       context,
     ).push<GroceryItem>(MaterialPageRoute(builder: (ctx) => NewItem()));
@@ -27,14 +28,23 @@ class _GroceryListState extends State<GroceryList> {
     });
   }
 
+  void _removeItem(GroceryItem item) {
+    setState(() {
+      _groceryItems.remove(item);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget content = Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          'No items added yet.',
-          style: Theme.of(context).textTheme.titleLarge,
+        Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Text(
+            'No items added yet.',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
         ),
       ],
     );
@@ -43,14 +53,21 @@ class _GroceryListState extends State<GroceryList> {
       content = ListView.builder(
         itemCount: _groceryItems.length,
         itemBuilder:
-            (context, index) => ListTile(
-              title: Text(_groceryItems[index].name),
-              leading: Container(
-                color: _groceryItems[index].category.color,
-                height: 24,
-                width: 24,
+            (context, index) => Dismissible(
+              onDismissed: (direction) {
+                _removeItem(_groceryItems[index]);
+              },
+              background: Container(color: Colors.red.withAlpha(80)),
+              key: ValueKey(_groceryItems[index].id),
+              child: ListTile(
+                title: Text(_groceryItems[index].name),
+                leading: Container(
+                  color: _groceryItems[index].category.color,
+                  height: 24,
+                  width: 24,
+                ),
+                trailing: Text(_groceryItems[index].quantity.toString()),
               ),
-              trailing: Text(_groceryItems[index].quantity.toString()),
             ),
       );
     }
