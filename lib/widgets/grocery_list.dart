@@ -29,6 +29,32 @@ class _GroceryListState extends State<GroceryList> {
 
   @override
   Widget build(BuildContext context) {
+    Widget content = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'No items added yet.',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+      ],
+    );
+
+    if (_groceryItems.isNotEmpty) {
+      content = ListView.builder(
+        itemCount: _groceryItems.length,
+        itemBuilder:
+            (context, index) => ListTile(
+              title: Text(_groceryItems[index].name),
+              leading: Container(
+                color: _groceryItems[index].category.color,
+                height: 24,
+                width: 24,
+              ),
+              trailing: Text(_groceryItems[index].quantity.toString()),
+            ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your Groceries'),
@@ -41,19 +67,7 @@ class _GroceryListState extends State<GroceryList> {
           ),
         ],
       ),
-      body: ListView.builder(
-        itemCount: _groceryItems.length,
-        itemBuilder:
-            (context, index) => ListTile(
-              title: Text(_groceryItems[index].name),
-              leading: Container(
-                color: _groceryItems[index].category.color,
-                height: 24,
-                width: 24,
-              ),
-              trailing: Text(_groceryItems[index].quantity.toString()),
-            ),
-      ),
+      body: content,
     );
   }
 }
