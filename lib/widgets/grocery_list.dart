@@ -27,13 +27,20 @@ class _GroceryListState extends State<GroceryList> {
   }
 
   void _loadItems() async {
-    final url = Uri.https(baseUrl, 'shopping-list.json');
-    final response = await http.get(url);
+    final url = Uri.https('baseUrl', 'shopping-list.json');
 
+    try {
+    final response = await http.get(url);
     if (response.statusCode >= 400) {
-      setState(() {
-        _error = 'Failed to fetch data. Please try again later.';
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to fetch data. Please try again later.',
+              style: TextStyle(color: Colors.white),),
+            backgroundColor: Colors.red.withAlpha(100),
+          ),
+        );
+      }
     }
 
     final Map<String, dynamic> listData = json.decode(response.body);
@@ -58,6 +65,21 @@ class _GroceryListState extends State<GroceryList> {
       _groceryItems = loadedItems;
       _isLoading = false;
     });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed load the items. Please try again later.',
+              style: TextStyle(color: Colors.white),),
+            backgroundColor: Colors.red.withAlpha(100),
+          ),
+        );
+
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _addItem() async {
@@ -74,26 +96,40 @@ class _GroceryListState extends State<GroceryList> {
     });
   }
 
-  void _removeItem(GroceryItem item) async {
-    final index = _groceryItems.indexOf(item);
+  Future<bool> _removeItem(GroceryItem item) async {
+    final url = Uri.https(baseUrl, 'shopping-list/${item.id}.json');
 
-    setState(() {
-      _groceryItems.remove(item);
-    });
+    try {
+      final response = await http.delete(url);
+      print(response.statusCode.toString());
 
-    final url = Uri.https('baseUrl', 'shopping-list/${item.id}.json');
-
-    final response = await http.delete(url);
-
-    print(response.statusCode.toString());
-
-    if (response.statusCode >= 400) {
-      // Optional: show error message
-      setState(() {
-        _groceryItems.insert(index, item);
-      });
+      if (response.statusCode >= 400) {
+        // If failed, show a snack bar with an error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete ${item.name}. Please try again.',
+              style: TextStyle(color: Colors.white),),
+              backgroundColor: Colors.red.withAlpha(100),
+            ),
+          );
+        }
+        return false; // deletion failed
+      }
+      return true; // deletion succeeded
+    } catch (e) {
+      // network error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Network error. Failed to delete ${item.name}.',
+            style: TextStyle(color: Colors.white),),
+            backgroundColor: Colors.red.withAlpha(100),
+          ),
+        );
+      }
+      return false; // deletion failed
     }
-
   }
 
   @override
@@ -102,18 +138,38 @@ class _GroceryListState extends State<GroceryList> {
 
     if (_isLoading) {
       content = const Center(child: CircularProgressIndicator());
+    } else if (_groceryItems.isEmpty && _error == null) {
+      content = const Center(child: Text('No items added yet.'));
     } else if (_error != null) {
       content = Center(child: Text(_error!));
-    } else if (_groceryItems.isEmpty) {
-      content = const Center(child: Text('No items added yet.'));
     } else {
       content = ListView.builder(
         itemCount: _groceryItems.length,
         itemBuilder: (ctx, index) => Dismissible(
-          onDismissed: (direction) {
-            _removeItem(_groceryItems[index]);
-          },
           key: ValueKey(_groceryItems[index].id),
+          confirmDismiss: (direction) async {
+            final item = _groceryItems[index];
+
+            // Show loading dialog
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => const Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+
+            final success = await _removeItem(item);
+
+            // Remove loading dialog
+            if (mounted) {
+              Navigator.of(context).pop();
+            }
+
+            // If deletion was successful, remove the item from the list
+            // else, show a snackbar with an error message
+            return success;
+          },
           child: ListTile(
             title: Text(_groceryItems[index].name),
             leading: Container(
