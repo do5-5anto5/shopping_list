@@ -74,10 +74,26 @@ class _GroceryListState extends State<GroceryList> {
     });
   }
 
-  void _removeItem(GroceryItem item) {
+  void _removeItem(GroceryItem item) async {
+    final index = _groceryItems.indexOf(item);
+
     setState(() {
       _groceryItems.remove(item);
     });
+
+    final url = Uri.https('baseUrl', 'shopping-list/${item.id}.json');
+
+    final response = await http.delete(url);
+
+    print(response.statusCode.toString());
+
+    if (response.statusCode >= 400) {
+      // Optional: show error message
+      setState(() {
+        _groceryItems.insert(index, item);
+      });
+    }
+
   }
 
   @override
@@ -86,34 +102,29 @@ class _GroceryListState extends State<GroceryList> {
 
     if (_isLoading) {
       content = const Center(child: CircularProgressIndicator());
-    }
-
-    if (_groceryItems.isNotEmpty) {
-      content = ListView.builder(
-        itemCount: _groceryItems.length,
-        itemBuilder:
-            (ctx, index) => Dismissible(
-              onDismissed: (direction) {
-                _removeItem(_groceryItems[index]);
-              },
-              key: ValueKey(_groceryItems[index].id),
-              child: ListTile(
-                title: Text(_groceryItems[index].name),
-                leading: Container(
-                  color: _groceryItems[index].category.color,
-                  height: 24,
-                  width: 24,
-                ),
-                trailing: Text(_groceryItems[index].quantity.toString()),
-              ),
-            ),
-      );
-    }
-
-    if (_error != null) {
+    } else if (_error != null) {
       content = Center(child: Text(_error!));
     } else if (_groceryItems.isEmpty) {
-      content = Center(child: Text('No items added yet.'));
+      content = const Center(child: Text('No items added yet.'));
+    } else {
+      content = ListView.builder(
+        itemCount: _groceryItems.length,
+        itemBuilder: (ctx, index) => Dismissible(
+          onDismissed: (direction) {
+            _removeItem(_groceryItems[index]);
+          },
+          key: ValueKey(_groceryItems[index].id),
+          child: ListTile(
+            title: Text(_groceryItems[index].name),
+            leading: Container(
+              color: _groceryItems[index].category.color,
+              height: 24,
+              width: 24,
+            ),
+            trailing: Text(_groceryItems[index].quantity.toString()),
+          ),
+        ),
+      );
     }
 
     return Scaffold(
