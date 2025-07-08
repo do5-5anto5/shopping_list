@@ -17,6 +17,8 @@ class GroceryList extends StatefulWidget {
 
 class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
+  var _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -27,9 +29,14 @@ class _GroceryListState extends State<GroceryList> {
   void _loadItems() async {
     final url = Uri.https(baseUrl, 'shopping-list.json');
     final response = await http.get(url);
-    final Map<String, dynamic> listData = json.decode(
-      response.body,
-    );
+
+    if (response.statusCode >= 400) {
+      setState(() {
+        _error = 'Failed to fetch data. Please try again later.';
+      });
+    }
+
+    final Map<String, dynamic> listData = json.decode(response.body);
     final List<GroceryItem> loadedItems = [];
     for (final item in listData.entries) {
       final category =
@@ -47,23 +54,24 @@ class _GroceryListState extends State<GroceryList> {
         ),
       );
     }
-
     setState(() {
       _groceryItems = loadedItems;
+      _isLoading = false;
     });
   }
 
   void _addItem() async {
     final newItem = await Navigator.of(
       context,
-    ).push<GroceryItem>(MaterialPageRoute(builder: (ctx) => NewItem()));
+    ).push<GroceryItem>(MaterialPageRoute(builder: (ctx) => const NewItem()));
 
-    if (newItem == null) return;
+    if (newItem == null) {
+      return;
+    }
 
     setState(() {
       _groceryItems.add(newItem);
     });
-    // _loadItems();
   }
 
   void _removeItem(GroceryItem item) {
@@ -74,28 +82,20 @@ class _GroceryListState extends State<GroceryList> {
 
   @override
   Widget build(BuildContext context) {
-    Widget content = Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Text(
-            'No items added yet.',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-        ),
-      ],
-    );
+    Widget content = const Center(child: Text('No items added yet.'));
+
+    if (_isLoading) {
+      content = const Center(child: CircularProgressIndicator());
+    }
 
     if (_groceryItems.isNotEmpty) {
       content = ListView.builder(
         itemCount: _groceryItems.length,
         itemBuilder:
-            (context, index) => Dismissible(
+            (ctx, index) => Dismissible(
               onDismissed: (direction) {
                 _removeItem(_groceryItems[index]);
               },
-              background: Container(color: Colors.red.withAlpha(80)),
               key: ValueKey(_groceryItems[index].id),
               child: ListTile(
                 title: Text(_groceryItems[index].name),
@@ -110,17 +110,14 @@ class _GroceryListState extends State<GroceryList> {
       );
     }
 
+    if (_error != null) {
+      content = Center(child: Text(_error!));
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your Groceries'),
-        actions: [
-          IconButton(
-            onPressed: () {
-              _addItem();
-            },
-            icon: Icon(Icons.add),
-          ),
-        ],
+        actions: [IconButton(onPressed: _addItem, icon: const Icon(Icons.add))],
       ),
       body: content,
     );
