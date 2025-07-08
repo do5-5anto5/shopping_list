@@ -56,8 +56,6 @@ class _GroceryListState extends State<GroceryList> {
     }
     setState(() {
       _groceryItems = loadedItems;
-    });
-    setState(() {
       _isLoading = false;
     });
   }
