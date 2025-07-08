@@ -27,13 +27,20 @@ class _GroceryListState extends State<GroceryList> {
   }
 
   void _loadItems() async {
-    final url = Uri.https(baseUrl, 'shopping-list.json');
-    final response = await http.get(url);
+    final url = Uri.https('baseUrl', 'shopping-list.json');
 
+    try {
+    final response = await http.get(url);
     if (response.statusCode >= 400) {
-      setState(() {
-        _error = 'Failed to fetch data. Please try again later.';
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to fetch data. Please try again later.',
+              style: TextStyle(color: Colors.white),),
+            backgroundColor: Colors.red.withAlpha(100),
+          ),
+        );
+      }
     }
 
     final Map<String, dynamic> listData = json.decode(response.body);
@@ -58,6 +65,21 @@ class _GroceryListState extends State<GroceryList> {
       _groceryItems = loadedItems;
       _isLoading = false;
     });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed load the items. Please try again later.',
+              style: TextStyle(color: Colors.white),),
+            backgroundColor: Colors.red.withAlpha(100),
+          ),
+        );
+
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _addItem() async {
@@ -75,14 +97,14 @@ class _GroceryListState extends State<GroceryList> {
   }
 
   Future<bool> _removeItem(GroceryItem item) async {
-    final url = Uri.https('baseUrl', 'shopping-list/${item.id}.json');
+    final url = Uri.https(baseUrl, 'shopping-list/${item.id}.json');
 
     try {
       final response = await http.delete(url);
       print(response.statusCode.toString());
 
       if (response.statusCode >= 400) {
-        // Se falhou, mostra erro mas não remove da lista
+        // If failed, show a snack bar with an error message
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -92,11 +114,11 @@ class _GroceryListState extends State<GroceryList> {
             ),
           );
         }
-        return false; // Indica que a deleção falhou
+        return false; // deletion failed
       }
-      return true; // Indica que a deleção foi bem-sucedida
+      return true; // deletion succeeded
     } catch (e) {
-      // Em caso de erro de rede
+      // network error
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -106,7 +128,7 @@ class _GroceryListState extends State<GroceryList> {
           ),
         );
       }
-      return false; // Indica que a deleção falhou
+      return false; // deletion failed
     }
   }
 
@@ -116,10 +138,10 @@ class _GroceryListState extends State<GroceryList> {
 
     if (_isLoading) {
       content = const Center(child: CircularProgressIndicator());
+    } else if (_groceryItems.isEmpty && _error == null) {
+      content = const Center(child: Text('No items added yet.'));
     } else if (_error != null) {
       content = Center(child: Text(_error!));
-    } else if (_groceryItems.isEmpty) {
-      content = const Center(child: Text('No items added yet.'));
     } else {
       content = ListView.builder(
         itemCount: _groceryItems.length,
